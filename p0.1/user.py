@@ -1,0 +1,11 @@
+print('--- START ---')
+print("\nКористувач:\n")
+name = input("Введіть імя: ")
+last_name = input("Введіть прізвище: ")   
+year = input("Введіть рік народжкння: ")
+#print("імя: " , name, "прізвище: ", last_name, "рік народжкння: ", year, sep="\n")
+#print("імя: " +name+"прізвище: "+ last_name+ "рік народжкння: "+ year)
+#print("імя: "+ 12 + "прізвище: ")
+print(F"імя: {name} прізвище: {last_name} рік народжкння: {year}")
+
+print('---END---')
