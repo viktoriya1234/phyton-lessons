@@ -1,1 +1,1 @@
-print lesson2
+print('lesson2')
