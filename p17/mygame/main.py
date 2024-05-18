@@ -4,6 +4,10 @@ import time
 import sys
 
 IMAGES_PATH = 'images/'
+IMAGES_MENU_PATH = 'images/menu/'
+IMAGES_BG_PATH = 'images/background/'
+FONTS_PATH = 'fonts//'
+
 SCREEN_HEIGHT = 508
 SCREEN_WIDTH = 828
 FPS = 60
@@ -47,7 +51,7 @@ class Bullets:
 
 class Player:
     delta_time = 1
-    moving: int = ''
+    moving: list = []
     bullets = None
 
     def __init__(self):
@@ -64,10 +68,11 @@ class Player:
         screen.blit(self.image, (self.x, self.y))
 
     def move(self):
-        if self.moving == pygame.K_LEFT:
-            self.move_left()
-        if self.moving == pygame.K_RIGHT:
-            self.move_right()
+        if len(self.moving) > 0:
+            if self.moving[0] == pygame.K_LEFT:
+                self.move_left()
+            elif self.moving[0] == pygame.K_RIGHT:
+                self.move_right()
 
         self.bullets.move()
 
@@ -114,6 +119,70 @@ class Background:
         screen.blit(self.bg_surface, (self.x, self.y))
 
 
+class Menu:
+    def __init__(self):
+        bg_img = pygame.image.load(IMAGES_MENU_PATH + 'bg-01.jpg')
+        self.bg_img = pygame.transform.scale(bg_img, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
+        box_img = pygame.image.load(IMAGES_MENU_PATH + 'menu-b-01.png')
+        self.box_img = pygame.transform.scale(box_img, (300, 300))
+
+    def start_btn(self):
+        color = (0, 0, 0)
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        if self.start_pos():
+            color = (255, 250, 250)
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+
+        font = pygame.font.SysFont(FONTS_PATH + 'PermanentMarker-Regular.ttf', 40)
+        text = font.render('START', True, color)
+        screen.blit(text, (360, 133))
+
+        font = pygame.font.SysFont('Arial', 14)
+        text = font.render('or press key - s', True, (0, 0, 0))
+        screen.blit(text, (362, 156))
+
+    def draw(self):
+        screen.blit(self.bg_img, (0, 0))
+        screen.blit(self.box_img, ((SCREEN_WIDTH / 2 - self.box_img.get_width() / 2), 20))
+        self.start_btn()
+        self.start_pos()
+
+    def start_pos(self):
+        pos = pygame.mouse.get_pos()
+        if (pos [0] > 360 and pos[0] < 457 and pos[1] > 135 and pos[1] < 167):
+            return True
+        return False
+
+    def mouse_click(self):
+        b = pygame.mouse.get_pressed()
+
+        if self.start_pos() and b[0]:
+            return 'run'
+
+        return None
+
+
+class Enemy:
+    x: int = 0
+    y: int = 0
+    speed: int = 0
+    image = None
+
+    def add(self):
+        pass
+
+    def move(self):
+        pass
+
+    def fire(self):
+        pass
+
+
+class Enemies:
+    pass
+
+
 class Game:
     game_run: bool = False
     bg_game = None
@@ -121,6 +190,7 @@ class Game:
     def __init__(self):
         self.player = Player()
         self.bg_game = Background()
+        self.menu = Menu()
         self.dt = 1
         self.interval = time.time()
 
@@ -131,13 +201,6 @@ class Game:
 
         self.player.dt = self.dt
 
-    def menu(self):
-        im = pygame.image.load(IMAGES_PATH + 'bg_menu_1.jpg')
-        screen.blit(im, (0, 0))
-        font = pygame.font.SysFont('Arial', 20)
-        text = font.render('- S', True, 'white')
-        screen.blit(text, (290, 126))
-
     def init(self):
         while True:
             for event in pygame.event.get():
@@ -147,8 +210,11 @@ class Game:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_s:
                         self.run()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if self.menu.mouse_click() == 'run':
+                        self.run()
 
-            self.menu()
+            self.menu.draw()
             pygame.display.update()
 
     def run(self):
@@ -162,17 +228,18 @@ class Game:
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_LEFT:
-                        self.player.moving = pygame.K_LEFT
-                    if event.key == pygame.K_RIGHT:
-                        self.player.moving = pygame.K_RIGHT
+                    if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                        if event.key not in self.player.moving: # [2, 3]
+                            self.player.moving.append(event.key)
+                            print(self.player.moving)
                     if event.key == pygame.K_SPACE:
                         self.player.shoot()
                     if event.key == pygame.K_q:
                         self.game_run = False
                         break
                 elif event.type == pygame.KEYUP:
-                    self.player.moving = 0
+                    if event.key  in self.player.moving:
+                        self.player.moving.remove(event.key)
 
             if self.game_run:
                 self.bg_game.background_draw()
