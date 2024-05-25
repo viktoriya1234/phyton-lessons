@@ -168,12 +168,23 @@ class Enemy:
     y: int = 0
     speed: int = 0
     image = None
+    rect = None
 
     def add(self):
-        pass
+        self.x = random.randint(0, 828)
+        self.y = random.randint(-100, -40)
+        self.speed = random.randint(1, 8)
+        n = random.randint(0, 3)
+        self.image = pygame.image.load(IMAGES_PATH + f'Hull_0{n}.png')
+        self.rect = self.image.get_rect()
+        self.rect.x = self.x
+        self.rect.y = self.y
 
     def move(self):
         pass
+
+    def draw(self):
+        screen.blit(self.image, self.rect)
 
     def fire(self):
         pass
@@ -238,7 +249,7 @@ class Game:
                         self.game_run = False
                         break
                 elif event.type == pygame.KEYUP:
-                    if event.key  in self.player.moving:
+                    if event.key in self.player.moving:
                         self.player.moving.remove(event.key)
 
             if self.game_run:
