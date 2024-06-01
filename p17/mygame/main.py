@@ -2,6 +2,7 @@ import pygame
 import random
 import time
 import sys
+import asyncio
 
 IMAGES_PATH = 'images/'
 IMAGES_MENU_PATH = 'images/menu/'
@@ -163,35 +164,55 @@ class Menu:
         return None
 
 
-class Enemy:
-    x: int = 0
-    y: int = 0
-    speed: int = 0
-    image = None
-    rect = None
+# class Enemy:
+#     x: int = 0
+#     y: int = 0
+#     speed: int = 0
+#     image = None
+#     rect = None
+#
+#     def add(self):
+#         self.x = random.randint(0, 828)
+#         self.y = random.randint(-100, -40)
+#         self.speed = random.randint(1, 8)
+#         n = random.randint(0, 3)
+#         self.image = pygame.image.load(IMAGES_PATH + f'Hull_0{n}.png')
+#         self.rect = self.image.get_rect()
+#         self.rect.x = self.x
+#         self.rect.y = self.y
+#
+#     def move(self):
+#         pass
+#
+#     def draw(self):
+#         screen.blit(self.image, self.rect)
+#
+#     def fire(self):
+#         pass
 
-    def add(self):
-        self.x = random.randint(0, 828)
-        self.y = random.randint(-100, -40)
-        self.speed = random.randint(1, 8)
-        n = random.randint(0, 3)
+
+enemies_group = pygame.sprite.Group()
+
+
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, groups):
+        super().__init__(groups)
+        n = random.randint(0, 4)
         self.image = pygame.image.load(IMAGES_PATH + f'Hull_0{n}.png')
-        self.rect = self.image.get_rect()
-        self.rect.x = self.x
-        self.rect.y = self.y
+        self.image = pygame.transform.scale(self.image, (80, 80))
+        x, y = random.randint(50, SCREEN_WIDTH-50), random.randint(-100, 50)
+        self.rect = self.image.get_rect(center=(x, y))
 
-    def move(self):
-        pass
+        self.speed = random.randint(50, 120)
 
-    def draw(self):
-        screen.blit(self.image, self.rect)
+    def update(self, dt):
 
-    def fire(self):
-        pass
+        self.rect.centery += 2 #self.speed * dt
 
+        print(self.rect)
 
-class Enemies:
-    pass
+        if self.rect.centery > SCREEN_HEIGHT - 100:
+            self.kill()
 
 
 class Game:
@@ -205,63 +226,72 @@ class Game:
         self.dt = 1
         self.interval = time.time()
 
+        self.enemy_event = pygame.event.custom_type()
+        pygame.time.set_timer(self.enemy_event, random.randint(1500, 3000))
+
     def delta_time(self):
         clock.tick(FPS)
         self.dt = time.time() - self.interval
         self.interval = time.time()
-
         self.player.dt = self.dt
 
-    def init(self):
+    async def init(self):
         while True:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_s:
-                        self.run()
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if self.menu.mouse_click() == 'run':
-                        self.run()
+            if self.game_run:
+                self.run()
+            else:
+                self.main_menu()
 
-            self.menu.draw()
             pygame.display.update()
+            await asyncio.sleep(0)
+
+    def main_menu(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_s:
+                    self.game_run = True
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if self.menu.mouse_click() == 'run':
+                    self.game_run = True
+
+        self.menu.draw()
 
     def run(self):
-        self.game_run = True
+        self.delta_time()
 
-        while self.game_run:
-            self.delta_time()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                    if event.key not in self.player.moving: # [2, 3]
+                        self.player.moving.append(event.key)
+                        # print(self.player.moving)
+                if event.key == pygame.K_SPACE:
+                    self.player.shoot()
+                if event.key == pygame.K_q:
+                    self.game_run = False
+                    break
+            elif event.type == pygame.KEYUP:
+                if event.key in self.player.moving:
+                    self.player.moving.remove(event.key)
+            elif event.type == self.enemy_event:
+                Enemy(enemies_group)
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                        if event.key not in self.player.moving: # [2, 3]
-                            self.player.moving.append(event.key)
-                            print(self.player.moving)
-                    if event.key == pygame.K_SPACE:
-                        self.player.shoot()
-                    if event.key == pygame.K_q:
-                        self.game_run = False
-                        break
-                elif event.type == pygame.KEYUP:
-                    if event.key in self.player.moving:
-                        self.player.moving.remove(event.key)
-
-            if self.game_run:
-                self.bg_game.background_draw()
-                self.player.move()
-                self.player.draw()
-
-                pygame.display.update()
+        if self.game_run:
+            self.bg_game.background_draw()
+            self.player.move()
+            self.player.draw()
+            enemies_group.update(self.dt)
+            enemies_group.draw(screen)
 
         # end while
 
 
 if __name__ == '__main__':
     game = Game()
-    game.init()
+    asyncio.run(game.init())
