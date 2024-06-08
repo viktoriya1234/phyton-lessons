@@ -24,15 +24,17 @@ class Bullet:
     def __init__(self, x: int, y: int):
         self.bullet = pygame.Surface((8, 15))
         self.bullet.fill((0, 0, 50))
-        self.x = x + 40
-        self.y = y
+        self.rect = self.bullet.get_rect()
+
+        self.rect.x = x + 40
+        self.rect.y = y
         self.speed = 2
 
     def move(self):
-        self.y -= self.speed
+        self.rect.y -= self.speed
 
     def draw(self):
-        screen.blit(self.bullet, (self.x, self.y))
+        screen.blit(self.bullet, self.rect)
 
 
 class Bullets:
@@ -44,8 +46,7 @@ class Bullets:
     def move(self):
         for b in self.bullet_list:
             b.move()
-
-            if b.y < 0:
+            if b.rect.y < 0:
                 self.bullet_list.remove(b)
             b.draw()
 
@@ -91,6 +92,29 @@ class Player:
 
     def shoot(self):
         self.bullets.add(self.x, self.y)
+
+
+class AnimationExplosion:
+    def __init__(self, x=0, y=0):
+        self.index = 0
+        self.frames = []
+        img = pygame.image.load(IMAGES_PATH + 'explosion.png')
+        for i in range(-10, 10):
+            k = 5 * (10 - abs(i) + 1)
+            im = pygame.transform.scale(img, (k, k))
+            self.frames.append(im)
+
+        self.x = x
+        self.y = y
+        self.end_animation = False
+
+    def animation(self):
+        self.index += 1
+        if self.index >= len(self.frames):
+            self.end_animation = True
+            self.index = 0
+
+        screen.blit(self.frames[self.index], (self.x, self.y))
 
 
 class Background:
@@ -229,11 +253,26 @@ class Game:
         self.enemy_event = pygame.event.custom_type()
         pygame.time.set_timer(self.enemy_event, random.randint(1500, 3000))
 
+        self.collisions_explosion = []
+
     def delta_time(self):
         clock.tick(FPS)
         self.dt = time.time() - self.interval
         self.interval = time.time()
         self.player.dt = self.dt
+
+    def collisions(self):
+        for b in self.player.bullets.bullet_list:
+            for e in enemies_group:
+                if pygame.sprite.collide_rect(b, e):
+                    self.collisions_explosion.append(AnimationExplosion(e.rect.x, e.rect.y))
+                    self.player.bullets.bullet_list.remove(b)
+                    e.kill()
+
+        for e in self.collisions_explosion:
+            e.animation()
+            if e.end_animation:
+                self.collisions_explosion.remove(e)
 
     async def init(self):
         while True:
@@ -287,6 +326,7 @@ class Game:
             self.player.move()
             self.player.draw()
             enemies_group.update(self.dt)
+            self.collisions()
             enemies_group.draw(screen)
 
         # end while
