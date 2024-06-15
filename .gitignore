@@ -1,5 +1,5 @@
 .git
-.idea
+../../../.idea
 .venv
 *.doc
 *.docx
